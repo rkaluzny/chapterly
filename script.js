@@ -36,6 +36,7 @@ const dialogTitle = document.getElementById('dialog-title');
 const dialogMessage = document.getElementById('dialog-message');
 const dialogCancelBtn = document.getElementById('dialog-cancel-btn');
 const dialogConfirmBtn = document.getElementById('dialog-confirm-btn');
+const previouslyReadCheckbox = document.getElementById('previously-read');
 
 // Book template
 const bookTemplate = document.getElementById('book-template');
@@ -408,6 +409,7 @@ function showAddBookForm() {
     bookAuthor.value = '';
     bookChapters.value = '';
     bookGenre.value = '';
+    previouslyReadCheckbox.checked = false;
     removeCoverImage();
     editingBookId = null;
 }
@@ -427,11 +429,46 @@ function generateId() {
 function handleCoverUpload(event) {
     const file = event.target.files[0];
     if (file) {
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Image size is too large. Please choose an image under 5MB.');
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = function(e) {
-            selectedCoverImage = e.target.result;
-            coverPreviewImage.src = selectedCoverImage;
-            coverPreview.classList.remove('hidden');
+            // Create an image element to check dimensions
+            const img = new Image();
+            img.onload = function() {
+                // Resize image if it's too large
+                const maxWidth = 800;
+                const maxHeight = 800;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width *= ratio;
+                    height *= ratio;
+
+                    // Create canvas to resize image
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Get resized image as data URL
+                    selectedCoverImage = canvas.toDataURL(file.type);
+                } else {
+                    selectedCoverImage = e.target.result;
+                }
+
+                // Update preview
+                coverPreviewImage.src = selectedCoverImage;
+                coverPreview.classList.remove('hidden');
+            };
+            img.src = e.target.result;
         };
         reader.readAsDataURL(file);
     }
@@ -471,21 +508,31 @@ function saveBook() {
         bookGenre.focus();
         return;
     }
+
+    const totalChapters = parseInt(bookChapters.value);
+    const isPreviouslyRead = previouslyReadCheckbox.checked;
     
     const book = {
         id: editingBookId || generateId(),
         title: bookTitle.value.trim(),
         author: bookAuthor.value.trim(),
-        totalChapters: parseInt(bookChapters.value),
+        totalChapters: totalChapters,
         genre: bookGenre.value,
         coverImage: selectedCoverImage,
-        readChapters: editingBookId ? books.find(b => b.id === editingBookId).readChapters : []
+        readChapters: isPreviouslyRead ? Array.from({length: totalChapters}, (_, i) => i + 1) : [],
+        readingHistory: [],
+        currentReadingSession: 1
     };
     
     if (editingBookId) {
         // Update existing book
         const index = books.findIndex(b => b.id === editingBookId);
         if (index !== -1) {
+            // Preserve reading history and session if exists
+            if (books[index].readingHistory) {
+                book.readingHistory = books[index].readingHistory;
+                book.currentReadingSession = books[index].currentReadingSession;
+            }
             books[index] = book;
         }
     } else {
@@ -568,6 +615,17 @@ function renderBook(book) {
     
     // Add chapters list
     const chaptersContainer = bookCard.querySelector('.chapters-container');
+    
+    // Add restart reading button if book is completed
+    if (readChapters === book.totalChapters) {
+        const restartButton = document.createElement('button');
+        restartButton.className = 'restart-reading-btn';
+        restartButton.innerHTML = '<i class="fas fa-redo"></i> Start Reading Again';
+        restartButton.addEventListener('click', () => restartReading(book.id));
+        chaptersContainer.appendChild(restartButton);
+    }
+    
+    // Add chapter checkboxes
     for (let i = 1; i <= book.totalChapters; i++) {
         const chapterItem = document.createElement('div');
         chapterItem.className = 'chapter-item';
@@ -889,6 +947,38 @@ function resetApp() {
     
     // Hide reading progress if visible
     readingProgressContainer.classList.add('hidden');
+}
+
+// Function to restart reading a book
+function restartReading(bookId) {
+    showConfirmationDialog(
+        'Restart Reading',
+        'Do you want to start reading this book again? Your previous reading progress will be saved in history.',
+        () => {
+            const book = books.find(b => b.id === bookId);
+            if (!book) return;
+            
+            // Save current reading session to history
+            if (!book.readingHistory) {
+                book.readingHistory = [];
+            }
+            
+            book.readingHistory.push({
+                session: book.currentReadingSession || 1,
+                completedDate: new Date().toISOString(),
+                readChapters: [...book.readChapters]
+            });
+            
+            // Start new reading session
+            book.readChapters = [];
+            book.currentReadingSession = (book.currentReadingSession || 1) + 1;
+            
+            // Save and update UI
+            saveBooks();
+            renderBooks();
+            updateStats();
+        }
+    );
 }
 
 // Initialize app

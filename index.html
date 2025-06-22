@@ -137,9 +137,18 @@
                 </select>
             </div>
             <div class="form-group">
+                <label for="previously-read">Reading Status</label>
+                <div class="reading-status-options">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="previously-read">
+                        <label for="previously-read">I have read this book before</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
                 <label for="book-cover">Book Cover (optional)</label>
                 <div class="cover-upload-container">
-                    <input type="file" id="book-cover-input" accept="image/*" class="hidden">
+                    <input type="file" id="book-cover-input" accept="image/*" capture="environment" class="hidden">
                     <button id="book-cover-btn" class="cover-upload-btn">
                         <i class="fas fa-image"></i> Upload Cover
                     </button>
