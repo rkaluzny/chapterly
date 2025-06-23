@@ -179,6 +179,11 @@ function initSortable() {
         chosenClass: 'sortable-chosen',
         dragClass: 'sortable-drag',
         filter: '#no-books-message', // Prevent dragging the "no books" message
+        delay: 300, // Add delay for touch devices to distinguish between scroll and drag
+        delayOnTouchOnly: true, // Only apply delay for touch devices
+        touchStartThreshold: 10, // Increase touch threshold to make dragging less sensitive
+        scrollSensitivity: 30, // Improve scroll sensitivity
+        scrollSpeed: 10, // Adjust scroll speed
         onEnd: function(evt) {
             // Update the order of books
             if (evt.oldIndex !== evt.newIndex) {
