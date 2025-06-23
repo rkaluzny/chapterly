@@ -505,6 +505,11 @@ header h1 {
     border-left: 4px solid var(--other-color);
 }
 
+.book-card.favorite {
+    border: 2px solid #ffd700;
+    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2);
+}
+
 .book-header {
     display: flex;
     justify-content: space-between;
@@ -779,6 +784,7 @@ header h1 {
     display: flex;
     align-items: center;
     margin-bottom: 10px;
+    transition: opacity 0.3s ease;
 }
 
 .chapter-checkbox {
@@ -786,6 +792,28 @@ header h1 {
     width: 18px;
     height: 18px;
     accent-color: var(--primary-color);
+}
+
+.chapter-checkbox:checked + label::before {
+    animation: checkmark 0.3s ease-in-out forwards;
+}
+
+@keyframes checkmark {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.chapter-item.completed {
+    opacity: 0.7;
 }
 
 /* Reading Progress Chart */
@@ -1016,4 +1044,56 @@ header h1 {
 
 .restart-reading-btn i {
     font-size: 1rem;
+}
+
+/* Favorite Button Styles */
+.favorite-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 5px;
+    transition: color 0.3s ease;
+}
+
+.favorite-btn:hover {
+    color: #ffd700;
+}
+
+.favorite-btn.active i {
+    color: #ffd700;
+}
+
+/* Goal Achievement Animation */
+@keyframes goalAchieved {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.daily-goal-status.achieved {
+    animation: goalAchieved 0.5s ease-in-out;
+}
+
+/* Favorite book card hover effect */
+.book-card.favorite:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+
+/* Sound Settings */
+.sound-settings {
+    margin-top: 15px;
+    padding: 10px;
+    border-top: 1px solid #eee;
+}
+
+.dark-mode .sound-settings {
+    border-top-color: #444;
 } 

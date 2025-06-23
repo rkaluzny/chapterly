@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book Reading App</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="style.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.css">
 </head>
@@ -71,6 +71,12 @@
                     <button id="save-goal-btn" class="save-btn">Save</button>
                 </div>
                 <p class="current-goal">Current Goal: <span id="current-goal-display">Not set</span></p>
+                <div class="sound-settings">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enable-sounds" checked>
+                        <label for="enable-sounds">Enable achievement sounds</label>
+                    </div>
+                </div>
             </div>
             <button class="close-chart-btn" id="close-chart-btn">Close</button>
         </div>
@@ -181,6 +187,9 @@
                     <span class="book-genre"></span>
                 </div>
                 <div class="book-actions">
+                    <button class="favorite-btn" title="Toggle Favorite">
+                        <i class="far fa-star"></i>
+                    </button>
                     <button class="edit-chapters-btn" title="Edit Chapters">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -228,6 +237,6 @@
     <!-- SortableJS for Drag & Drop -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <script src="script.js"></script>
+    <script src="script.min.js"></script>
 </body>
 </html> 

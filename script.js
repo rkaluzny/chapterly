@@ -1,5 +1,8 @@
 // Book Reading App - Main Script
 
+// Sound Effects
+const ACHIEVEMENT_SOUND = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//tQwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAADAAAGhgBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVWqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr///////////////////////////////////////////8AAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAJAAAAAAAAAAAAYZxhxzGAAAAAAAAAAAAAAAAAAAA//tQxAAACVQBIlQAAAgAAA0gAAABJBEEQBBBCQRBEEAQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ//tQxBYAC0QBIdAAABAAAA0gAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB//tQxDYAF5gBH9AAABBYAGMaAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB');
+
 // DOM Elements
 const addBookBtn = document.getElementById('add-book-btn');
 const addBookForm = document.getElementById('add-book-form');
@@ -55,6 +58,7 @@ let currentFilters = {
 // Constants for progress tracking
 const DAILY_PROGRESS_KEY = 'daily_reading_progress';
 const DAILY_GOAL_KEY = 'daily_reading_goal';
+const SOUND_ENABLED_KEY = 'sound_enabled';
 const MAX_DAYS_HISTORY = 7;
 
 // Initialize the app
@@ -72,17 +76,51 @@ function initApp() {
         noBookMessage: !!noBookMessage
     });
 
-    loadBooks();
-    renderBooks();
-    updateStats();
-    initDarkMode();
-    initSortable();
-    initFilters();
-    initDailyGoal();
-    updateDailyProgress();
-    addEventListeners();
+    try {
+        loadBooks();
+        renderBooks();
+        updateStats();
+        initDarkMode();
+        initSortable();
+        initFilters();
+        initDailyGoal();
+        initSoundSettings();
+        updateDailyProgress();
+        addEventListeners();
+        
+        console.log('App initialization completed');
+    } catch (error) {
+        console.error('Error during app initialization:', error);
+    }
+}
+
+// Initialize sound settings
+function initSoundSettings() {
+    const soundEnabled = localStorage.getItem(SOUND_ENABLED_KEY) !== 'false';
+    const soundToggle = document.getElementById('enable-sounds');
+    soundToggle.checked = soundEnabled;
     
-    console.log('App initialization completed');
+    soundToggle.addEventListener('change', (e) => {
+        localStorage.setItem(SOUND_ENABLED_KEY, e.target.checked);
+    });
+}
+
+// Play achievement sound
+function playAchievementSound() {
+    const soundEnabled = localStorage.getItem(SOUND_ENABLED_KEY) !== 'false';
+    if (soundEnabled) {
+        ACHIEVEMENT_SOUND.play().catch(err => console.log('Sound playback failed:', err));
+    }
+}
+
+// Toggle favorite status
+function toggleFavorite(bookId) {
+    const bookIndex = books.findIndex(b => b.id === bookId);
+    if (bookIndex !== -1) {
+        books[bookIndex].favorite = !books[bookIndex].favorite;
+        saveBooks();
+        renderBooks();
+    }
 }
 
 // Initialize daily goal
@@ -136,6 +174,12 @@ function loadBooks() {
     const savedBooks = localStorage.getItem('books');
     if (savedBooks) {
         books = JSON.parse(savedBooks);
+        // Migrate old book format if necessary
+        books = books.map(book => ({
+            ...book,
+            favorite: book.favorite || false,
+            chapters: book.chapters || Array(book.totalChapters).fill().map(() => ({ completed: false }))
+        }));
     }
 }
 
@@ -195,14 +239,30 @@ function initSortable() {
 
 // Initialize filters
 function initFilters() {
-    // Status filter
-    statusFilter.addEventListener('change', applyFilters);
-    
-    // Genre filter
-    genreFilter.addEventListener('change', applyFilters);
-    
-    // Populate genre filter with unique genres from books
-    updateGenreFilter();
+    try {
+        // Set initial filter values
+        currentFilters = {
+            status: 'all',
+            genre: 'all'
+        };
+        
+        // Status filter
+        if (statusFilter) {
+            statusFilter.value = currentFilters.status;
+            statusFilter.addEventListener('change', applyFilters);
+        }
+        
+        // Genre filter
+        if (genreFilter) {
+            genreFilter.value = currentFilters.genre;
+            genreFilter.addEventListener('change', applyFilters);
+        }
+        
+        // Populate genre filter with unique genres from books
+        updateGenreFilter();
+    } catch (error) {
+        console.error('Error initializing filters:', error);
+    }
 }
 
 // Update genre filter options based on available books
@@ -262,30 +322,7 @@ function applyFilters() {
         
         if (!book) return;
         
-        let showBook = true;
-        
-        // Status filter
-        if (currentFilters.status !== 'all') {
-            const readChaptersCount = book.readChapters.length;
-            const totalChapters = book.totalChapters;
-            
-            switch (currentFilters.status) {
-                case 'in-progress':
-                    showBook = readChaptersCount > 0 && readChaptersCount < totalChapters;
-                    break;
-                case 'completed':
-                    showBook = readChaptersCount === totalChapters;
-                    break;
-                case 'not-started':
-                    showBook = readChaptersCount === 0;
-                    break;
-            }
-        }
-        
-        // Genre filter
-        if (showBook && currentFilters.genre !== 'all') {
-            showBook = book.genre === currentFilters.genre;
-        }
+        let showBook = shouldShowBook(book);
         
         bookCard.style.display = showBook ? '' : 'none';
     });
@@ -296,6 +333,38 @@ function applyFilters() {
     if (visibleBooks === 0) {
         noBookMessage.textContent = 'No books found with the selected filters.';
     }
+}
+
+// Check if book should be shown based on current filters
+function shouldShowBook(book) {
+    if (!book) return false;
+    
+    let showBook = true;
+    
+    // Status filter
+    if (currentFilters.status !== 'all') {
+        const readChaptersCount = book.readChapters.length;
+        const totalChapters = book.totalChapters;
+        
+        switch (currentFilters.status) {
+            case 'in-progress':
+                showBook = readChaptersCount > 0 && readChaptersCount < totalChapters;
+                break;
+            case 'completed':
+                showBook = readChaptersCount === totalChapters;
+                break;
+            case 'not-started':
+                showBook = readChaptersCount === 0;
+                break;
+        }
+    }
+    
+    // Genre filter
+    if (showBook && currentFilters.genre !== 'all') {
+        showBook = book.genre === currentFilters.genre;
+    }
+    
+    return showBook;
 }
 
 // Update books order after drag and drop
@@ -489,185 +558,215 @@ function removeCoverImage() {
 
 // Save book
 function saveBook() {
-    // Validate input
-    if (!bookTitle.value.trim()) {
-        alert('Please enter a book title.');
-        bookTitle.focus();
-        return;
-    }
-    
-    if (!bookAuthor.value.trim()) {
-        alert('Please enter an author name.');
-        bookAuthor.focus();
-        return;
-    }
-    
-    if (!bookChapters.value || bookChapters.value < 1) {
-        alert('Please enter a valid number of chapters (minimum 1).');
-        bookChapters.focus();
-        return;
-    }
-    
-    if (!bookGenre.value) {
-        alert('Please select a genre.');
-        bookGenre.focus();
+    if (!bookTitle.value || !bookAuthor.value || !bookChapters.value || !bookGenre.value) {
+        alert('Please fill in all required fields');
         return;
     }
 
     const totalChapters = parseInt(bookChapters.value);
     const isPreviouslyRead = previouslyReadCheckbox.checked;
     
-    const book = {
+    const bookData = {
         id: editingBookId || generateId(),
         title: bookTitle.value.trim(),
         author: bookAuthor.value.trim(),
         totalChapters: totalChapters,
         genre: bookGenre.value,
         coverImage: selectedCoverImage,
-        readChapters: isPreviouslyRead ? Array.from({length: totalChapters}, (_, i) => i + 1) : [],
-        readingHistory: [],
-        currentReadingSession: 1
+        chapters: Array(totalChapters).fill().map(() => ({ completed: isPreviouslyRead })),
+        favorite: false,
+        readChapters: isPreviouslyRead ? Array.from({length: totalChapters}, (_, i) => i + 1) : []
     };
-    
+
     if (editingBookId) {
         // Update existing book
         const index = books.findIndex(b => b.id === editingBookId);
         if (index !== -1) {
-            // Preserve reading history and session if exists
-            if (books[index].readingHistory) {
-                book.readingHistory = books[index].readingHistory;
-                book.currentReadingSession = books[index].currentReadingSession;
-            }
-            books[index] = book;
+            // Preserve existing chapters and favorite status
+            bookData.chapters = books[index].chapters;
+            bookData.favorite = books[index].favorite;
+            bookData.readChapters = books[index].readChapters;
+            books[index] = bookData;
         }
     } else {
         // Add new book
-        books.push(book);
+        books.push(bookData);
     }
-    
-    // Save and update UI
+
     saveBooks();
     renderBooks();
     updateStats();
     updateGenreFilter();
     hideAddBookForm();
+    resetForm();
 }
 
 // Render all books
 function renderBooks() {
-    // Clear container
-    while (booksContainer.firstChild) {
-        booksContainer.removeChild(booksContainer.firstChild);
+    try {
+        booksContainer.innerHTML = '';
+        
+        if (books.length === 0) {
+            noBookMessage.classList.remove('hidden');
+            return;
+        }
+        
+        noBookMessage.classList.add('hidden');
+        
+        // Sort books: favorites first, then by title
+        const sortedBooks = [...books].sort((a, b) => {
+            if (a.favorite !== b.favorite) {
+                return b.favorite ? 1 : -1;
+            }
+            return a.title.localeCompare(b.title);
+        });
+        
+        let visibleBooks = 0;
+        
+        sortedBooks.forEach(book => {
+            if (shouldShowBook(book)) {
+                const bookElement = renderBook(book);
+                booksContainer.appendChild(bookElement);
+                visibleBooks++;
+            }
+        });
+        
+        // Show message if no books match the filters
+        if (visibleBooks === 0 && books.length > 0) {
+            noBookMessage.classList.remove('hidden');
+            noBookMessage.textContent = 'No books match the selected filters.';
+        }
+    } catch (error) {
+        console.error('Error rendering books:', error);
     }
-    
-    // Show message if no books
-    if (books.length === 0) {
-        noBookMessage.style.display = '';
-        noBookMessage.textContent = 'No books added yet. Click "Add New Book" to get started.';
-        booksContainer.appendChild(noBookMessage);
-        return;
-    }
-    
-    // Hide message and render books
-    noBookMessage.style.display = 'none';
-    books.forEach(book => renderBook(book));
-    
-    // Apply current filters
-    applyFilters();
 }
 
 // Render single book
 function renderBook(book) {
-    const bookElement = bookTemplate.content.cloneNode(true);
-    const bookCard = bookElement.querySelector('.book-card');
-    
-    // Set book ID and genre
-    bookCard.dataset.id = book.id;
-    bookCard.dataset.genre = book.genre;
-    
-    // Set title and author
-    bookCard.querySelector('.book-title').textContent = book.title;
-    bookCard.querySelector('.book-author').textContent = `by ${book.author}`;
-    
-    // Set genre tag
-    const genreTag = bookCard.querySelector('.book-genre');
-    genreTag.textContent = getGenreName(book.genre);
-    genreTag.dataset.genre = book.genre;
-    
-    // Set cover image or default icon
-    const coverElement = bookCard.querySelector('.book-cover');
-    coverElement.dataset.genre = book.genre;
-    
-    if (book.coverImage) {
-        const img = document.createElement('img');
-        img.src = book.coverImage;
-        img.alt = `${book.title} cover`;
-        coverElement.appendChild(img);
-    } else {
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-book';
-        coverElement.appendChild(icon);
-    }
-    
-    // Update progress
-    const readChapters = book.readChapters.length;
-    const progress = (readChapters / book.totalChapters) * 100;
-    
-    bookCard.querySelector('.progress').style.width = `${progress}%`;
-    bookCard.querySelector('.progress-text').textContent = `${Math.round(progress)}%`;
-    bookCard.querySelector('.read-chapters').textContent = readChapters;
-    bookCard.querySelector('.total-chapters').textContent = book.totalChapters;
-    
-    // Add chapters list
-    const chaptersContainer = bookCard.querySelector('.chapters-container');
-    
-    // Add restart reading button if book is completed
-    if (readChapters === book.totalChapters) {
-        const restartButton = document.createElement('button');
-        restartButton.className = 'restart-reading-btn';
-        restartButton.innerHTML = '<i class="fas fa-redo"></i> Start Reading Again';
-        restartButton.addEventListener('click', () => restartReading(book.id));
-        chaptersContainer.appendChild(restartButton);
-    }
-    
-    // Add chapter checkboxes
-    for (let i = 1; i <= book.totalChapters; i++) {
-        const chapterItem = document.createElement('div');
-        chapterItem.className = 'chapter-item';
+    try {
+        const template = document.getElementById('book-template');
+        const bookElement = template.content.cloneNode(true);
+        const bookCard = bookElement.querySelector('.book-card');
         
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'chapter-checkbox';
-        checkbox.checked = book.readChapters.includes(i);
-        checkbox.dataset.chapter = i;
-        checkbox.addEventListener('change', (e) => toggleChapterRead(e, book.id));
+        bookCard.dataset.id = book.id;
         
-        const label = document.createElement('label');
-        label.textContent = `Chapter ${i}`;
+        // Set book details
+        bookCard.querySelector('.book-title').textContent = book.title;
+        bookCard.querySelector('.book-author').textContent = `by ${book.author}`;
+        bookCard.querySelector('.book-genre').textContent = getGenreName(book.genre);
+        bookCard.querySelector('.total-chapters').textContent = book.totalChapters;
         
-        chapterItem.appendChild(checkbox);
-        chapterItem.appendChild(label);
-        chaptersContainer.appendChild(chapterItem);
+        // Set up favorite button and status
+        const favoriteBtn = bookCard.querySelector('.favorite-btn');
+        if (favoriteBtn) {
+            if (book.favorite) {
+                bookCard.classList.add('favorite');
+                const starIcon = favoriteBtn.querySelector('i');
+                if (starIcon) {
+                    starIcon.classList.remove('far');
+                    starIcon.classList.add('fas');
+                }
+            }
+            
+            favoriteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFavorite(book.id);
+            });
+        }
+        
+        // Set cover image if available
+        const coverElement = bookCard.querySelector('.book-cover');
+        if (coverElement) {
+            // Clear any existing content
+            coverElement.innerHTML = '';
+            
+            if (book.coverImage) {
+                const img = document.createElement('img');
+                img.src = book.coverImage;
+                img.alt = `${book.title} cover`;
+                coverElement.appendChild(img);
+            } else {
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-book';
+                coverElement.appendChild(icon);
+            }
+        }
+        
+        // Calculate read chapters
+        const readChapters = book.readChapters.length;
+        const readChaptersElement = bookCard.querySelector('.read-chapters');
+        if (readChaptersElement) {
+            readChaptersElement.textContent = readChapters;
+        }
+        
+        // Update progress bar
+        const progress = (readChapters / book.totalChapters) * 100;
+        const progressBar = bookCard.querySelector('.progress');
+        const progressText = bookCard.querySelector('.progress-text');
+        
+        if (progressBar) {
+            progressBar.style.width = `${progress}%`;
+        }
+        
+        if (progressText) {
+            progressText.textContent = `${Math.round(progress)}%`;
+        }
+        
+        // Set up chapters container
+        const chaptersContainer = bookCard.querySelector('.chapters-container');
+        if (chaptersContainer) {
+            for (let i = 0; i < book.totalChapters; i++) {
+                const chapterItem = document.createElement('div');
+                chapterItem.className = 'chapter-item';
+                
+                // Check if chapter is completed
+                const isCompleted = book.chapters && book.chapters[i] && book.chapters[i].completed;
+                // For backward compatibility
+                const isInReadChapters = book.readChapters.includes(i + 1);
+                
+                if (isCompleted || isInReadChapters) {
+                    chapterItem.classList.add('completed');
+                }
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'chapter-checkbox';
+                checkbox.id = `chapter-${book.id}-${i}`;
+                checkbox.checked = isCompleted || isInReadChapters;
+                
+                const label = document.createElement('label');
+                label.htmlFor = `chapter-${book.id}-${i}`;
+                label.textContent = `Chapter ${i + 1}`;
+                
+                chapterItem.appendChild(checkbox);
+                chapterItem.appendChild(label);
+                chaptersContainer.appendChild(chapterItem);
+                
+                checkbox.addEventListener('change', (e) => toggleChapterRead(e, book.id));
+            }
+        }
+        
+        // Set up event listeners
+        const editChaptersBtn = bookCard.querySelector('.edit-chapters-btn');
+        if (editChaptersBtn) {
+            editChaptersBtn.addEventListener('click', () => toggleChapters(book.id));
+        }
+        
+        const markReadBtn = bookCard.querySelector('.mark-read-btn');
+        if (markReadBtn) {
+            markReadBtn.addEventListener('click', () => markReadToday(book.id));
+        }
+        
+        const deleteBookBtn = bookCard.querySelector('.delete-book-btn');
+        if (deleteBookBtn) {
+            deleteBookBtn.addEventListener('click', () => deleteBook(book.id));
+        }
+        
+        return bookCard;
+    } catch (error) {
+        console.error('Error rendering book:', error);
+        return document.createElement('div');
     }
-    
-    // Add event listeners
-    bookCard.querySelector('.edit-chapters-btn').addEventListener('click', () => {
-        toggleChapters(book.id);
-    });
-    
-    bookCard.querySelector('.mark-read-btn').addEventListener('click', () => {
-        markReadToday(book.id);
-    });
-    
-    bookCard.querySelector('.delete-book-btn').addEventListener('click', () => {
-        showConfirmationDialog(
-            'Delete Book',
-            `Are you sure you want to delete "${book.title}"?`,
-            () => deleteBook(book.id)
-        );
-    });
-    
-    booksContainer.appendChild(bookElement);
 }
 
 // Toggle chapters list
@@ -679,31 +778,45 @@ function toggleChapters(bookId) {
 
 // Toggle chapter read status
 function toggleChapterRead(event, bookId) {
-    const chapter = parseInt(event.target.dataset.chapter);
+    const checkbox = event.target;
+    const chapterIndex = parseInt(checkbox.id.split('-')[2]);
     const book = books.find(b => b.id === bookId);
     
     if (!book) return;
     
-    if (event.target.checked) {
-        // Mark chapter as read
-        if (!book.readChapters.includes(chapter)) {
-            book.readChapters.push(chapter);
+    // Update chapter completion status
+    if (!book.chapters[chapterIndex]) {
+        book.chapters[chapterIndex] = { completed: false };
+    }
+    book.chapters[chapterIndex].completed = checkbox.checked;
+    
+    // Update readChapters array for backward compatibility
+    const chapterNumber = chapterIndex + 1;
+    if (checkbox.checked) {
+        if (!book.readChapters.includes(chapterNumber)) {
+            book.readChapters.push(chapterNumber);
             book.readChapters.sort((a, b) => a - b);
-            recordChapterRead(bookId, chapter);
+            recordChapterRead(bookId, chapterNumber);
         }
     } else {
-        // Mark chapter as unread
-        const index = book.readChapters.indexOf(chapter);
+        const index = book.readChapters.indexOf(chapterNumber);
         if (index !== -1) {
             book.readChapters.splice(index, 1);
         }
     }
     
-    // Update UI
+    // Add animation class
+    const chapterItem = checkbox.closest('.chapter-item');
+    if (checkbox.checked) {
+        chapterItem.classList.add('completed');
+    } else {
+        chapterItem.classList.remove('completed');
+    }
+    
+    // Save changes and update UI
     saveBooks();
     updateBookProgress(bookId);
     updateStats();
-    applyFilters();
 }
 
 // Record chapter read in daily progress
@@ -735,6 +848,20 @@ function recordChapterRead(bookId, chapter) {
         updateDailyProgress();
         checkDailyGoalAchievement();
         
+        // Check if daily goal is achieved
+        const dailyGoal = parseInt(localStorage.getItem(DAILY_GOAL_KEY));
+        if (dailyGoal && dailyProgress[today].count >= dailyGoal) {
+            const goalStatus = document.querySelector('.daily-goal-status');
+            goalStatus.classList.remove('hidden');
+            goalStatus.classList.add('achieved');
+            playAchievementSound();
+            
+            // Remove animation class after animation completes
+            setTimeout(() => {
+                goalStatus.classList.remove('achieved');
+            }, 500);
+        }
+        
         // Update chart if visible
         if (!readingProgressContainer.classList.contains('hidden') && readingChart) {
             updateReadingChart();
@@ -748,29 +875,46 @@ function markReadToday(bookId) {
     
     if (!book) return;
     
-    // Get unread chapters
-    const unreadChapters = Array.from(
-        { length: book.totalChapters },
-        (_, i) => i + 1
-    ).filter(chapter => !book.readChapters.includes(chapter));
+    let chaptersMarked = 0;
     
-    if (unreadChapters.length === 0) {
-        alert('All chapters have already been read!');
-        return;
+    // Mark all chapters as read
+    for (let i = 0; i < book.totalChapters; i++) {
+        const chapterNumber = i + 1;
+        
+        // Skip already read chapters
+        if (book.readChapters.includes(chapterNumber)) {
+            continue;
+        }
+        
+        // Update chapter completion status
+        if (!book.chapters[i]) {
+            book.chapters[i] = { completed: true };
+        } else {
+            book.chapters[i].completed = true;
+        }
+        
+        // Update readChapters array
+        book.readChapters.push(chapterNumber);
+        
+        // Record chapter read for daily progress
+        recordChapterRead(bookId, chapterNumber);
+        chaptersMarked++;
     }
     
-    // Mark all unread chapters as read
-    unreadChapters.forEach(chapter => {
-        book.readChapters.push(chapter);
-        recordChapterRead(bookId, chapter);
-    });
-    
+    // Sort readChapters array
     book.readChapters.sort((a, b) => a - b);
     
-    // Update UI
+    // Save changes and update UI
     saveBooks();
     renderBooks();
     updateStats();
+    
+    // Show confirmation message
+    if (chaptersMarked > 0) {
+        alert(`Marked ${chaptersMarked} chapter${chaptersMarked > 1 ? 's' : ''} as read today.`);
+    } else {
+        alert('All chapters are already marked as read.');
+    }
 }
 
 // Update book progress
@@ -790,17 +934,24 @@ function updateBookProgress(bookId) {
 
 // Delete book
 function deleteBook(bookId) {
-    const index = books.findIndex(b => b.id === bookId);
+    const book = books.find(b => b.id === bookId);
+    if (!book) return;
     
-    if (index !== -1) {
-        books.splice(index, 1);
-        saveBooks();
-        renderBooks();
-        updateStats();
-        updateGenreFilter();
-    }
-    
-    hideConfirmationDialog();
+    showConfirmationDialog(
+        'Delete Book',
+        `Are you sure you want to delete "${book.title}"?`,
+        () => {
+            const index = books.findIndex(b => b.id === bookId);
+            
+            if (index !== -1) {
+                books.splice(index, 1);
+                saveBooks();
+                renderBooks();
+                updateStats();
+                updateGenreFilter();
+            }
+        }
+    );
 }
 
 // Update statistics
@@ -984,6 +1135,17 @@ function restartReading(bookId) {
             updateStats();
         }
     );
+}
+
+// Reset form fields
+function resetForm() {
+    bookTitle.value = '';
+    bookAuthor.value = '';
+    bookChapters.value = '';
+    bookGenre.value = '';
+    previouslyReadCheckbox.checked = false;
+    removeCoverImage();
+    editingBookId = null;
 }
 
 // Initialize app
