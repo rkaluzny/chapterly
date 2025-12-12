@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>My Topics</h1>
+        <div>
+            <a href="{% url 'import-data' %}" class="btn btn-secondary me-2">Import</a>
+            <a href="{% url 'topic-create' %}" class="btn btn-primary">Create New Topic</a>
+        </div>
+    </div>
+
+    {% if topics %}
+        <div class="list-group">
+            {% for topic in topics %}
+                <a href="{% url 'topic-detail' topic.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center card-lift">
+                    {{ topic.name }}
+                    <span class="badge bg-primary rounded-pill">{{ topic.decks.count }} Decks</span>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center">
+            <p>You have not created any topics yet.</p>
+            <p>Create your first topic now to organize your flashcard decks.</p>
+        </div>
+    {% endif %}
+{% endblock %}

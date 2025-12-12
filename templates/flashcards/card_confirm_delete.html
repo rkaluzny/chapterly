@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'topic-list' %}">Topics</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'topic-detail' topic.pk %}">{{ topic.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'deck-detail' topic.pk deck.pk %}">{{ deck.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Delete Card</li>
+        </ol>
+    </nav>
+
+    <h1>Delete Card</h1>
+    <p>Are you sure you want to delete this card?</p>
+    <p><strong>Front:</strong> {{ card.front }}</p>
+    <p><strong>Back:</strong> {{ card.back }}</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, delete permanently</button>
+        <a href="{% url 'deck-detail' topic.pk deck.pk %}" class="btn btn-secondary">Cancel</a>
+    </form>
+{% endblock %}

@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Dashboard</h1>
+</div>
+
+<div class="row">
+    <!-- Main Content Column -->
+    <div class="col-lg-8">
+        <!-- Start Learning Section -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-play-circle-fill me-2"></i>Start Learning</h5>
+            </div>
+            <div class="card-body">
+                {% if decks_to_learn %}
+                    <p>You have cards due for review in these decks:</p>
+                    <ul class="list-group list-group-flush">
+                        {% for deck in decks_to_learn %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ deck.name }}</strong>
+                                    <small class="text-muted d-block">in {{ deck.topic.name }}</small>
+                                </div>
+                                <a href="{% url 'learn-cards' deck.topic.pk deck.pk %}" class="btn btn-sm btn-primary">
+                                    Learn Now <span class="badge bg-danger">{{ deck.due_cards_count }}</span>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="text-center p-3">
+                        <p class="h5">All caught up!</p>
+                        <p>No cards are due for review right now. Why not practice a random deck?</p>
+                        {# Placeholder for a random deck link #}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- My Topics Section -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-collection-fill me-2"></i>My Topics</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_topics %}
+                    <ul class="list-group list-group-flush">
+                        {% for topic in recent_topics %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <a href="{% url 'topic-detail' topic.pk %}" class="text-decoration-none">{{ topic.name }}</a>
+                                <span class="badge bg-secondary">{{ topic.decks.count }} Decks</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                     <p>You haven't created any topics yet.</p>
+                {% endif %}
+            </div>
+            <div class="card-footer text-end">
+                <a href="{% url 'topic-list' %}" class="btn btn-outline-secondary btn-sm">View All Topics</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Sidebar Column -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'topic-create' %}" class="btn btn-outline-primary"><i class="bi bi-folder-plus me-2"></i>Create New Topic</a>
+                    {# A generic 'create deck' button is tricky without a topic context. 
+                       This can be improved later, maybe with a modal. For now, it links to the topic list. #}
+                    <a href="{% url 'topic-list' %}" class="btn btn-outline-primary"><i class="bi bi-file-plus me-2"></i>Create New Deck</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistics -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bar-chart-line-fill me-2"></i>Statistics</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Total Topics
+                    <span class="badge bg-primary rounded-pill">{{ topic_count }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Total Decks
+                    <span class="badge bg-success rounded-pill">{{ deck_count }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Total Cards
+                    <span class="badge bg-info rounded-pill">{{ card_count }}</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-calendar-week me-2"></i>Weekly Learning Progress</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="progressChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Weekly Progress Chart
+    const progressCtx = document.getElementById('progressChart').getContext('2d');
+    const progressChart = new Chart(progressCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ weekly_progress_labels|safe }},
+            datasets: [{
+                label: 'Cards Learned per Day',
+                data: {{ weekly_progress_data|safe }},
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

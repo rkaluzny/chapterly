@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'topic-list' %}">Topics</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'topic-detail' topic.pk %}">{{ topic.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ deck.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Deck: {{ deck.name }}</h1>
+        <div>
+            {% if deck.topic.user == request.user %}
+                <a href="{% url 'share-deck' deck.topic.pk deck.pk %}" class="btn btn-info me-2">Share</a>
+                <a href="{% url 'export-deck' deck.topic.pk deck.pk %}" class="btn btn-success me-2">Export</a>
+                <a href="{% url 'deck-update' deck.topic.pk deck.pk %}" class="btn btn-secondary me-2">Rename Deck</a>
+                <a href="{% url 'deck-delete' deck.topic.pk deck.pk %}" class="btn btn-danger">Delete Deck</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">Cards in this Deck</h2>
+        {% if deck.topic.user == request.user %}
+            <a href="{% url 'card-create' deck.topic.pk deck.pk %}" class="btn btn-primary">Create New Card</a>
+        {% endif %}
+    </div>
+
+    {% if cards %}
+        <div class="list-group">
+            {% for card in cards %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">{{ card.front }}</h5>
+                        <p class="mb-1 text-muted">{{ card.back }}</p>
+                    </div>
+                    {% if deck.topic.user == request.user %}
+                        <div>
+                            <a href="{% url 'card-update' deck.topic.pk deck.pk card.pk %}" class="btn btn-sm btn-outline-secondary me-2">Edit</a>
+                            <a href="{% url 'card-delete' deck.topic.pk deck.pk card.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center">
+            <p>There are no cards in this deck yet.</p>
+        </div>
+    {% endif %}
+
+    <a href="{% url 'topic-detail' topic.pk %}" class="btn btn-outline-secondary mt-4">Back to Topic</a>
+    <a href="{% url 'learn-cards' deck.topic.pk deck.pk %}" class="btn btn-success mt-4 ms-2 {% if not cards %}disabled{% endif %}" {% if not cards %}aria-disabled="true"{% endif %}>Learn Cards</a>
+
+{% endblock %}

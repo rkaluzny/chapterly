@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Delete Deck</h1>
+    <p>Are you sure you want to delete the deck <strong>"{{ deck.name }}"</strong>?</p>
+    <p class="text-danger">All associated cards will also be permanently deleted!</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, delete permanently</button>
+        <a href="{% url 'topic-detail' deck.topic.pk %}" class="btn btn-secondary">Cancel</a>
+    </form>
+{% endblock %}

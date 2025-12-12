@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Topic: {{ topic.name }}</h1>
+        <div>
+            <a href="{% url 'topic-update' topic.pk %}" class="btn btn-secondary me-2">Rename</a>
+            <a href="{% url 'share-topic' topic.pk %}" class="btn btn-info me-2">Share</a>
+            <a href="{% url 'export-topic' topic.pk %}" class="btn btn-success me-2">Export</a>
+            <a href="{% url 'topic-delete' topic.pk %}" class="btn btn-danger">Delete</a>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">Decks in this Topic</h2>
+        <a href="{% url 'deck-create' topic.pk %}" class="btn btn-primary">Create New Deck</a>
+    </div>
+
+    {% if decks %}
+        <div class="list-group">
+            {% for deck in decks %}
+                <div class="list-group-item d-flex justify-content-between align-items-center card-lift">
+                    <div>
+                        <a href="{% url 'deck-detail' topic.pk deck.pk %}" class="text-decoration-none h5 mb-0">{{ deck.name }}</a>
+                        <span class="badge bg-info rounded-pill ms-2">{{ deck.cards.count }} Cards</span>
+                    </div>
+                    <div>
+                        <a href="{% url 'deck-update' topic.pk deck.pk %}" class="btn btn-sm btn-outline-secondary me-2">Edit</a>
+                        <a href="{% url 'deck-delete' topic.pk deck.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center">
+            <p>There are no decks in this topic yet.</p>
+        </div>
+    {% endif %}
+    
+    <a href="{% url 'topic-list' %}" class="btn btn-outline-secondary mt-4">Back to Topic List</a>
+{% endblock %}

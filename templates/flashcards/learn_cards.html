@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'topic-list' %}">Topics</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'topic-detail' topic.pk %}">{{ topic.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'deck-detail' topic.pk deck.pk %}">{{ deck.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Learn</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">Learning: {{ deck.name }}</h1>
+
+    <div class="card-container" style="height: 250px; display: none;">
+        <div class="card-flip">
+            <div class="card card-face card-face-front text-center">
+                <div class="card-body d-flex flex-column justify-content-center">
+                    <h2 id="card-front-content" class="card-title"></h2>
+                </div>
+            </div>
+            <div class="card card-face card-face-back text-center">
+                <div class="card-body d-flex flex-column justify-content-center">
+                    <h2 id="card-back-content" class="card-title"></h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="session-controls" class="d-grid gap-2 col-8 mx-auto mt-4" style="display: none;">
+        <div id="feedback-buttons" style="display:none;" class="d-flex justify-content-center">
+            <button class="btn btn-danger btn-lg me-3" onclick="handleFeedback(false)">Wrong</button>
+            <button class="btn btn-success btn-lg" onclick="handleFeedback(true)">Correct</button>
+        </div>
+    </div>
+
+    <div id="session-message" class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p>Loading deck...</p>
+    </div>
+
+    <div class="mt-4 text-center">
+        <p>Cards remaining in this session: <span id="session-count">0</span></p>
+    </div>
+    
+    <script>
+        // UI Elements
+        const cardContainer = document.querySelector('.card-container');
+        const cardFlip = document.querySelector('.card-flip');
+        const cardFrontContent = document.getElementById('card-front-content');
+        const cardBackContent = document.getElementById('card-back-content');
+        const sessionControls = document.getElementById('session-controls');
+        const feedbackButtons = document.getElementById('feedback-buttons');
+        const sessionMessage = document.getElementById('session-message');
+        const sessionCountSpan = document.getElementById('session-count');
+        
+        // State
+        let sessionQueue = [];
+        let currentCard = null;
+
+        // Fisher-Yates Shuffle
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function drawNextCard() {
+            cardFlip.classList.add('is-loading');
+            
+            setTimeout(() => {
+                cardFlip.classList.remove('is-flipped');
+            }, 10); // Ensure the loading class is applied before starting the flip
+
+            setTimeout(() => {
+                if (sessionQueue.length > 0) {
+                    currentCard = sessionQueue.shift();
+                    cardFrontContent.innerHTML = currentCard.front;
+                    cardBackContent.innerHTML = currentCard.back;
+                    
+                    feedbackButtons.style.display = 'none';
+                    cardContainer.style.display = '';
+                    sessionControls.style.display = 'grid';
+                    sessionMessage.style.display = 'none';
+                } else {
+                    // Session finished
+                    cardContainer.style.display = 'none';
+                    sessionControls.style.display = 'none';
+                    sessionMessage.innerHTML = '<h2 class="text-center">Congratulations! You have completed the deck.</h2>';
+                    sessionMessage.style.display = 'block';
+                    currentCard = null; // No more cards
+                }
+                sessionCountSpan.textContent = sessionQueue.length + (currentCard ? 1 : 0);
+                
+                // Allow content to fade in
+                setTimeout(() => cardFlip.classList.remove('is-loading'), 50);
+
+            }, 300); // Half of the 0.6s flip animation
+        }
+
+        function handleFeedback(isCorrect) {
+            // Track the learning event on the backend
+            if (currentCard) {
+                const trackUrl = `/cards/${currentCard.id}/track/`;
+                fetch(trackUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                });
+            }
+            
+            if (!isCorrect) {
+                sessionQueue.push(currentCard); // Add to the end of the queue
+            }
+            currentCard = null;
+            drawNextCard();
+        }
+
+        async function startSession() {
+            const getDeckUrl = `/topics/{{ topic.pk }}/decks/{{ deck.pk }}/learn/get-deck/`;
+            try {
+                const response = await fetch(getDeckUrl);
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const data = await response.json();
+
+                if (!data.cards || data.cards.length === 0) {
+                    cardContainer.style.display = 'none';
+                    sessionControls.style.display = 'none';
+                    sessionMessage.innerHTML = '<h2 class="text-center">This deck has no cards.</h2>';
+                    sessionMessage.style.display = 'block';
+                    return;
+                }
+
+                sessionQueue = data.cards;
+                shuffle(sessionQueue);
+                drawNextCard();
+
+            } catch (error) {
+                sessionMessage.innerHTML = '<h2 class="text-center text-danger">Error loading deck.</h2>';
+                console.error("Fetch error:", error);
+            }
+        }
+
+        cardContainer.addEventListener('click', () => {
+            if (currentCard && !cardFlip.classList.contains('is-flipped')) {
+                cardFlip.classList.add('is-flipped');
+                feedbackButtons.style.display = 'flex';
+            }
+        });
+
+        // Swipe Gesture Handling
+        let touchstartX = 0;
+        let swipeThreshold = 50;
+
+        cardContainer.addEventListener('touchstart', (e) => {
+            if (cardFlip.classList.contains('is-flipped')) {
+                touchstartX = e.changedTouches[0].screenX;
+            }
+        }, { passive: true });
+
+        cardContainer.addEventListener('touchend', (e) => {
+            if (touchstartX === 0) return;
+
+            const touchendX = e.changedTouches[0].screenX;
+            const deltaX = touchendX - touchstartX;
+            
+            if (Math.abs(deltaX) > swipeThreshold) {
+                handleFeedback(deltaX > 0); // Swipe Right = Correct (true)
+            }
+            touchstartX = 0;
+        });
+
+        // Initial load
+        startSession();
+    </script>
+{% endblock %}

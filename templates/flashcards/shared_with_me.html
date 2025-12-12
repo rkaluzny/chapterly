@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1 class="mb-4">Decks Shared With Me</h1>
+
+    {% if shared_decks %}
+        <div class="list-group">
+            {% for deck in shared_decks %}
+                <div class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                    <div class="mb-2 mb-md-0">
+                        <h5 class="mb-1">{{ deck.name }}</h5>
+                        <p class="mb-1 text-muted">From Topic: {{ deck.topic.name }} (Owner: {{ deck.topic.user.username }})</p>
+                    </div>
+                    <div class="ms-md-auto">
+                        <a href="{% url 'deck-detail' deck.topic.pk deck.pk %}" class="btn btn-sm btn-outline-primary me-2">View</a>
+                        <a href="{% url 'accept-shared-deck' deck.pk %}" class="btn btn-sm btn-outline-success me-2">Accept</a>
+                        <form method="post" action="{% url 'decline-shared-deck' deck.pk %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to decline this shared deck?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Decline</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center p-5 border rounded">
+            <p class="h4">No decks have been shared with you yet.</p>
+            <p class="text-muted">When someone shares a deck with you, it will appear here.</p>
+        </div>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,182 @@
+/* Card Flip Animation */
+.card-container {
+    perspective: 1000px;
+    height: 250px; /* Explicit height */
+}
+
+.card-container:hover {
+    cursor: pointer;
+}
+
+.card-flip {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.6s;
+}
+
+.card-flip.is-flipped {
+    transform: rotateY(180deg);
+}
+
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.card-flip.is-loading .card-face {
+    opacity: 0;
+}
+
+.card-face-back {
+    transform: rotateY(180deg);
+}
+
+/* Explicit dark mode card style to fix rendering issue */
+[data-bs-theme="dark"] .card {
+    background-color: var(--bs-dark-bg-subtle);
+    border: 1px solid var(--bs-border-color);
+}
+
+/* General Page Load Fade-In */
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Card Hover-Lift Effect */
+.card-lift {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Improved Form Styles */
+.form-control, .form-select {
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #86b7fe; /* Bootstrap's default focus color */
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Custom styling for textareas to give them more space */
+
+textarea.form-control {
+
+    min-height: 150px;
+
+}
+
+
+
+/* Swipe Gesture Visuals */
+
+
+
+.card-flip.swiping {
+
+
+
+    transition: none; /* Disable transition during swipe for direct manipulation */
+
+
+
+}
+
+
+
+
+
+
+
+.swipe-overlay {
+
+
+
+    position: absolute;
+
+
+
+    top: 0; left: 0; right: 0; bottom: 0;
+
+
+
+    border-radius: var(--bs-card-border-radius);
+
+
+
+    opacity: 0;
+
+
+
+    display: flex;
+
+
+
+    align-items: center;
+
+
+
+    justify-content: center;
+
+
+
+    font-size: 2.5rem;
+
+
+
+    font-weight: bold;
+
+
+
+    color: white;
+
+
+
+    transition: opacity 0.2s ease;
+
+
+
+    text-transform: uppercase;
+
+
+
+}
+
+
+
+.swipe-overlay.right { background-color: rgba(40, 167, 69, 0.8); }
+
+
+
+.swipe-overlay.wrong { background-color: rgba(220, 53, 69, 0.8); }
+
+
+
+.swipe-overlay.visible { opacity: 1; }
+
+
+
+
